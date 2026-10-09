@@ -3,8 +3,8 @@ function stallFrame(x, y, w, h, open) { panel(x, y, w, h, 16, open ? '#f3d9b0' :
   shape(() => RR(x + 6, y + 6, w - 12, 14, 7), '#8a5a3a', 2.5); }
 SC.stable = { name: 'stable', enter() { Music.play('map'); },
   draw() { const L = lay(); g.fillStyle = lin(0, 0, 0, VH, [[0, '#f6e3c4'], [1, '#e8c79a']]); g.fillRect(0, 0, VW, VH);
-    const tb = topBar('Stable', () => go(S.started && S.horses.length ? SC.map : SC.title), { col: '#2fa39a', rightW: 120 * L.u });
-    shoeCounter(L.x1 - 12, L.y0 + (tb - L.y0) / 2 - 18 * L.u, 36 * L.u, S.shoes);
+    const tb = topBar('My Horses', () => go(S.started && S.horses.length ? SC.build : SC.title), { col: '#2fa39a', rightW: 120 * L.u });
+    shoeCounter(L.x1 - 12, L.y0 + (tb - L.y0) / 2 - 18 * L.u, 36 * L.u, S.wallet || 0);
     const ab = clamp(64 * L.u, 60, 86); const top = tb + 12, bot = L.y1 - ab - 18; const cols = L.port ? 2 : 3, rows = 6 / cols; const gap = 12;
     const sw = (L.cw - 24 - gap * (cols - 1)) / cols, sh = Math.min((bot - top - gap * (rows - 1)) / rows, sw * 1.1); const gx = L.x0 + 12, gy = top + Math.max(0, (bot - top - (sh * rows + gap * (rows - 1))) / 2);
     const open = stallsOpen();
@@ -73,13 +73,14 @@ SC.coat = { name: 'coat',
 /* ---------- name entry ---------- */
 const KB_ROWS = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
 SC.name = { name: 'name',
-  enter(a) { this.a = a; this.v = a.rename != null ? S.horses[a.rename].name : ''; this.msg = ''; this.msgT = 0; Music.play('map'); this.idea = Math.floor(Math.random() * NAME_IDEAS.length);
-    setTimeout(() => { if (scene === this) Voice.say('nameQ', a.rename != null ? 'Pick a new name.' : 'What\u2019s your horse\u2019s name?'); }, 300); },
+  enter(a) { this.a = a; this.foal = !!a.foal; if (this.foal) { this.spec = S.foal ? S.foal.spec : foalSpec(); } this.v = a.rename != null ? S.horses[a.rename].name : this.foal && S.foal ? S.foal.name : ''; this.msg = ''; this.msgT = 0; Music.play('map'); this.idea = Math.floor(Math.random() * NAME_IDEAS.length);
+    setTimeout(() => { if (scene === this) Voice.say('nameQ', a.foal ? 'A baby foal was born in your Foal Nursery! What\u2019s your foal\u2019s name?' : a.rename != null ? 'Pick a new name.' : 'What\u2019s your horse\u2019s name?'); }, 300); },
   type(ch) { if (this.v.length >= 12) { SFX.no(); return; } if (ch === ' ' && (!this.v || this.v.endsWith(' '))) return; this.v += this.v.length === 0 || this.v.endsWith(' ') ? ch.toUpperCase() : ch.toLowerCase(); this.msg = ''; SFX.key(); },
   back() { this.v = this.v.slice(0, -1); SFX.key(); },
   done() { const n = this.v.trim(); if (!n) { this.msg = 'Type a name first!'; this.msgT = 0; SFX.no(); return; }
     if (!nameIsKind(n)) { this.msg = 'Hmm, let\u2019s pick a kind name for your horse!'; this.msgT = 0; SFX.no(); Voice.say('kind', this.msg); return; }
     const a = this.a;
+    if (this.foal) { S.foal = { name: n, spec: this.spec, born: Date.now() }; save(); SFX.whinny('happy'); confetti(VW / 2, VH * 0.3, 70); Voice.say('hello', 'Hello, ' + n + '! Your foal will follow you everywhere!'); toast('Welcome, ' + n + '!', '#ff8fb1'); go(SC.build); return; }
     if (a.rename != null) { S.horses[a.rename].name = n; save(); toast('Hello, ' + n + '!', '#2fa39a'); go(SC.stable); return; }
     const h = newHorse(a.breed, a.spec, n); S.horses.push(h); S.cur = S.horses.length - 1; S.started = true; save(); SFX.whinny('happy'); confetti(VW / 2, VH * 0.3, 70);
     Voice.say('hello', 'Hello, ' + n + '!');
@@ -87,14 +88,14 @@ SC.name = { name: 'name',
   key(k, e) { if (/^[a-zA-Z]$/.test(k)) this.type(k); else if (k === ' ') this.type(' '); else if (k === 'Backspace') this.back(); else if (k === 'Enter') this.done(); else if (k === '-' || k === "'") this.type(k); },
   update(dt) { this.msgT += dt; },
   draw() { const L = lay(); const u = L.u; g.fillStyle = lin(0, 0, 0, VH, [[0, '#e9f7ff'], [1, '#ffeef8']]); g.fillRect(0, 0, VW, VH);
-    const re = this.a.rename != null; const h = re ? S.horses[this.a.rename] : null; const spec = re ? h.spec : this.a.spec;
-    const tb = topBar(re ? 'New name' : 'Name your horse', () => go(re ? SC.stable : SC.coat, re ? undefined : { first: this.a.first }), { col: '#3f6fd8' });
+    const fo = this.foal; const re = this.a.rename != null; const h = re ? S.horses[this.a.rename] : null; const spec = fo ? this.spec : re ? h.spec : this.a.spec;
+    const tb = topBar(fo ? 'Name your foal' : re ? 'New name' : 'Name your horse', () => go(fo ? SC.build : re ? SC.stable : SC.coat, re || fo ? undefined : { first: this.a.first }), { col: fo ? '#ff8fb1' : '#3f6fd8' });
     const keyH = clamp(Math.min(54 * u, (L.ch - 60) / (L.port ? 9 : 5.6)), 40, 70);
     let kx, kw, ky, fx, fw, fy, fieldH = clamp(58 * u, 50, 76);
     if (L.port) { kx = L.x0 + 6; kw = L.cw - 12; ky = L.y1 - keyH * 4 - 30; fx = L.x0 + 16; fw = L.cw - 32; const hsz = ky - tb - fieldH - keyH - 60; fy = tb + Math.max(0, hsz) + 24;
-      if (hsz > 60) { const hs = Math.min(fw / 460, hsz / 360); drawHorse(VW / 2, tb + 14 + hsz, hs, { pose: 'proud', coat: spec, outfit: outfitOf(h, h ? {} : { only: { saddle: 'S5', pad: 'B7', bridle: 'H8' } }) }); } }
+      if (hsz > 60) { const hs = Math.min(fw / 460, hsz / 360); if (fo) foalPair(VW / 2, tb + 14 + hsz, hs, spec); else drawHorse(VW / 2, tb + 14 + hsz, hs, { pose: 'proud', coat: spec, outfit: outfitOf(h, h ? {} : { only: { saddle: 'S5', pad: 'B7', bridle: 'H8' } }) }); } }
     else { kx = L.x0 + L.cw * 0.42; kw = L.x1 - kx - 8; ky = L.y1 - keyH * 4 - 30; fx = L.x0 + 14; fw = L.cw * 0.42 - 28; fy = tb + 14;
-      const hsz = L.y1 - (fy + fieldH + 10 + clamp(44 * u, 44, 56)) - 18; if (hsz > 60) { const hs = Math.min(fw / 440, hsz / 360); drawHorse(fx + fw / 2, L.y1 - 6, hs, { pose: 'proud', coat: spec, outfit: outfitOf(h, h ? {} : { only: { saddle: 'S5', pad: 'B7', bridle: 'H8' } }) }); } }
+      const hsz = L.y1 - (fy + fieldH + 10 + clamp(44 * u, 44, 56)) - 18; if (hsz > 60) { const hs = Math.min(fw / 440, hsz / 360); if (fo) foalPair(fx + fw / 2, L.y1 - 6, hs, spec); else drawHorse(fx + fw / 2, L.y1 - 6, hs, { pose: 'proud', coat: spec, outfit: outfitOf(h, h ? {} : { only: { saddle: 'S5', pad: 'B7', bridle: 'H8' } }) }); } }
     // field
     panel(fx, fy, fw, fieldH, fieldH / 2, '#fff', { lw: 3.5 }); const fs = clamp(30 * u, 26, 40);
     const shown = this.v || ''; text(shown, fx + fw / 2, fy + fieldH / 2 + 1, fs, '#7446c4', { fam: F.title, w: 400, max: fw - 40 });
@@ -117,3 +118,5 @@ SC.name = { name: 'name',
     btn('kDone', kx + kw - dw, y4, dw, keyH, 'Done!', { col: '#6bd66b', fs: kfs * 0.9, fn: () => this.done() });
   },
   kkey(id, x, y, w, h, label, fs, fn, col = '#fff') { const p = isPressed(id) ? 2 : 0; g.fillStyle = 'rgba(59,39,65,.25)'; g.beginPath(); RR(x, y + 3, w, h - 1, 10); g.fill(); shape(() => RR(x, y + p, w, h - 3, 10), isPressed(id) ? '#ffe9a8' : col, 2.5); text(label, x + w / 2, y + p + h / 2 - 1, fs, INK, { fam: label.length > 1 ? F.ui : F.title, w: label.length > 1 ? 800 : 400, max: w - 6 }); hit(id, x, y, w, h, { fn, sfx: 0 }); } };
+
+function foalPair(x, y, hs, spec) { const m = HORSE(); if (m) drawHorseC(m, x - 90 * hs, y, hs * 0.62, { pose: 'stand' }); drawHorse(x + 150 * hs, y, hs * 0.4, { pose: 'proud', coat: spec, outfit: {} }); heartsDraw(x + 60 * hs, y - 250 * hs, hs * 0.7, T); }

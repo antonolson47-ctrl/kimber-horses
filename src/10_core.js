@@ -94,10 +94,11 @@ function freshSave() {
     prog: { prologue: [0], ch: Array.from({ length: 7 }, () => ({ races: [0, 0, 0], grand: false })), finale: false, seen: {} },
     shoes: 0, jarNext: 100, golden: 0, stickers: {}, rosettes: [], unlocked: {}, kim: { helmet: 0, polo: 0 },
     set: { music: 0.7, sfx: 0.9, voice: true, autoRead: true, helper: false, slow: false, swap: false, unlockAll: false, unlockLands: false },
-    stats: { races: 0, jumps: 0, stops: 0, hugs: 0 }, last: Date.now() };
+    stats: { races: 0, jumps: 0, stops: 0, hugs: 0, inters: 0 }, last: Date.now(),
+    wallet: 0, inter: { c: [0, 0, 0, 0, 0, 0, 0], a: [0, 0, 0, 0, 0, 0, 0] }, build: { own: {} }, shop: { built: 0, own: {} }, truck: { p: {}, tok: 0, day: '', rep: null, drives: 0 }, fix: { tok: 0, day: '' }, foal: null, facts: {} };
 }
 let S = freshSave();
-function migrate(d) { const f = freshSave(); for (const k in f) if (d[k] === undefined) d[k] = f[k]; for (const k in f.set) if (d.set[k] === undefined) d.set[k] = f.set[k]; for (const k in f.prog) if (d.prog[k] === undefined) d.prog[k] = f.prog[k]; for (const k in f.stats) if (d.stats[k] === undefined) d.stats[k] = f.stats[k]; return d; }
+function migrate(d) { const f = freshSave(); if (d.wallet === undefined) d.wallet = d.shoes || 0; for (const k of ['inter', 'build', 'shop', 'truck', 'fix']) if (d[k] && typeof d[k] === 'object') { for (const kk in f[k]) if (d[k][kk] === undefined) d[k][kk] = f[k][kk]; } for (const k in f) if (d[k] === undefined) d[k] = f[k]; for (const k in f.set) if (d.set[k] === undefined) d.set[k] = f.set[k]; for (const k in f.prog) if (d.prog[k] === undefined) d.prog[k] = f.prog[k]; for (const k in f.stats) if (d.stats[k] === undefined) d.stats[k] = f.stats[k]; return d; }
 function loadSave() { try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { const d = JSON.parse(raw); if (d && d.v === 1) S = migrate(d); } } catch (e) { S = freshSave(); } }
 let saveT = 0;
 function save() { try { S.last = Date.now(); localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { } }

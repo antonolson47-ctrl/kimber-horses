@@ -70,7 +70,7 @@ const Race = { };
 SC.race = { name: 'race',
   enter(a) { const l = a.l, r = a.r; this.l = l; this.r = r; const G = genRace(l, r); const tr = S.treats || {};
     Object.assign(this, G, { x: 0, v: 0, y: 0, airT: -1, duckT: 0, jumpReq: -9, duckReq: -9, meter: tr.apple ? 1 : 0.5, hearts: (tr.hug ? 3 : 0) + (tr.golden ? 1 : 0), bumps: 0, shoes: 0, caught: false, phase: 'count', t: 0, pt: 0, stopT: 0, slowT: 0, boostT: tr.apple ? 3 : 0, cyc: 0, stickers: [], fx: [], oops: 0, lastHoof: 0, paused: false, hint: null });
-    this.maxHearts = this.hearts; this.tr = tr; this.shoeTotal = this.picks.length; this.shoeNeed = Math.round(this.shoeTotal * 0.55);
+    this.tr = tr; racePerks(this); this.maxHearts = this.hearts; this.shoeTotal = this.picks.length; this.shoeNeed = Math.round(this.shoeTotal * 0.55);
     this.whirl = { d: 1400, on: l > 0, t: 0, giggle: 0, away: 0 };
     this.v0 = S.set.slow ? 400 : 520; this.J = tr.cake ? 0.86 : 0.78; this.JH = tr.cake ? 205 : 175;
     Music.play('land' + l); this.prepared = ''; this.prepare(); this.countBeep = 3; SFX.ding(0); AUD_LOG('raceStart_' + l + '_' + r);
@@ -97,7 +97,7 @@ SC.race = { name: 'race',
     if (this.phase === 'finish') { this.stopT += dt; this.v = Math.max(this.v0 * 0.25, this.v - this.v0 * 0.8 * dt); this.x += this.v * dt; this.cyc += dt * this.v / 430; if (this.stopT > 3.0) this.finishRace(); return; }
     // RUN
     this.pt += dt; const held = HELD.has('gallop') || this.keyGallop; const v0 = this.v0;
-    const gal = held && this.meter > 0.02; if (gal) this.meter = Math.max(0, this.meter - dt / 4.2); else this.meter = Math.min(1, this.meter + dt / (this.tr.carrot ? 5 : 9));
+    const gal = held && this.meter > 0.02; if (gal) this.meter = Math.max(0, this.meter - dt / (4.2 * (this.drainK || 1))); else this.meter = Math.min(1, this.meter + dt * (this.refillK || 1) / (this.tr.carrot ? 5 : 9));
     this.galloping = gal; this.boostT = Math.max(0, this.boostT - dt); this.slowT = Math.max(0, this.slowT - dt); this.duckT = Math.max(0, this.duckT - dt); this.oops = Math.max(0, this.oops - dt * 1.5);
     let vt = gal || this.boostT > 0 ? v0 * 1.55 : v0; if (this.slowT > 0) vt = v0 * 0.45; this.v += (vt - this.v) * Math.min(1, dt * 3);
     this.x += this.v * dt; this.cyc += dt * this.v / 430;

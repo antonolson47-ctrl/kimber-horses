@@ -7,7 +7,7 @@ SC.map = { name: 'map', panel: null,
   key(k) { if (k === 'Escape' && this.panel != null) { this.panel = null; return true; } },
   draw() { const L = lay(), u = L.u; const port = L.port;
     // background valley (scrolling)
-    const tb = topBar('Moonmeadow Valley', () => go(SC.title), { col: '#7446c4', rightW: 130 * u }); shoeCounter(L.x1 - 12, L.y0 + (tb - L.y0) / 2 - 18 * u, 36 * u, S.shoes);
+    const tb = topBar('Moonmeadow Valley', () => go(SC.title), { col: '#7446c4', rightW: 130 * u }); shoeCounter(L.x1 - 12, L.y0 + (tb - L.y0) / 2 - 18 * u, 36 * u, S.wallet || 0);
     const bb = clamp(70 * u, 66, 92); const top = tb, bot = L.y1 - bb - 8; let nodeR = clamp(46 * u, 44, 70); const below = clamp(16 * u, 15, 21) * 2.25 + 12 * u + 6; let amp = 0, c0 = 0; if (!port) { const H = bot - top; nodeR = Math.max(30, Math.min(nodeR, (H - below - 16) / 2)); const slack = Math.max(0, H - 16 - 2 * nodeR - below); amp = Math.min(H * 0.2, slack / 2); c0 = top + 8 + nodeR + slack / 2; } const sp = nodeR * 3.4;
     const n = 8; const len = port ? sp * n + nodeR * 2 : sp * n + nodeR * 2; const area = port ? bot - top : L.cw;
     const off = port ? scrollArea('map', 0, top, VW, bot - top, len) : scrollArea('map', 0, top, VW, bot - top, len + L.x0 * 2, true);
@@ -31,13 +31,13 @@ SC.map = { name: 'map', panel: null,
       const lfs = clamp(16 * u, 15, 21); const lab = (i === 0 ? '' : i + '. ') + Ld.n; const lw2 = Math.min(measure(lab, lfs, F.title, 400) + 28, port ? L.cw * 0.6 : sp - 8); const ly = y + nodeR + lfs * 0.9 + 4;
       panel(x - lw2 / 2, ly - lfs * 0.8, lw2, lfs * 1.6, lfs * 0.8, open ? Ld.col : '#b9b0c6', { lw: 2.5, shadow: false }); text(lab, x, ly + 1, lfs, '#fff', { fam: F.title, w: 400, stroke: shade(open ? Ld.col : '#b9b0c6', -0.45), sw: 4, max: lw2 - 14 });
       const nr = Ld.races.length; for (let r = 0; r < nr; r++) { const sx = x + (r - (nr - 1) / 2) * 30 * u, sy = ly + lfs * 1.35; const st = raceStars(i, r); shape(() => star(sx, sy, 10 * u), st > 0 ? '#ffd93d' : '#fff', 2); if (st > 0) text(String(st), sx, sy + 1, 9 * u, INK, { fam: F.title, w: 400 }); }
-      if (i === S.cur * 0 + this.suggest() && HORSE()) { const hs = nodeR / 420; drawHorseC(HORSE(), x - nodeR * 1.15, y + nodeR * 0.95, hs * 1.4, { pose: 'stand', rider: true }); }
+      if (i === S.cur * 0 + this.suggest() && HORSE()) { const hs = nodeR / 420; drawHorseC(HORSE(), x - nodeR * 1.15, y + nodeR * 0.95, hs * 1.4, { pose: 'stand', rider: true }); if (S.foal) drawFoal(x - nodeR * 1.15 - 120 * hs * 1.4 + Math.sin(this.t * 2) * 4, y + nodeR * 0.98, hs * 1.4, { pose: gallopPose(this.t * 0.9) }); }
       hit('land' + i, x - nodeR, y - nodeR, nodeR * 2, nodeR * 2 + lfs * 2.4, { fn: () => { if (!open) { SFX.no(); toast('Finish ' + LANDS[i - 1].n + ' first!', '#9b8ab8'); return; } this.panel = i; SFX.ui(); } }); }
     popClip();
     // bottom bar
     g.fillStyle = 'rgba(255,255,255,.85)'; g.fillRect(0, bot, VW, VH - bot); strokeOnly(() => { g.moveTo(0, bot); g.lineTo(VW, bot); }, INK, 3);
     const gr = clamp(24 * u, 24, 32); const bw = (L.cw - 24 - 12 * 3 - gr * 2 - 8) / 3; const by = bot + (L.y1 - bot - bb) / 2 + 4;
-    btn('mStable', L.x0 + 12, by, bw, bb - 8, 'Stable', { col: '#2fa39a', fs: clamp(18 * u, 16, 24), fn: () => go(SC.stable) });
+    btn('mStable', L.x0 + 12, by, bw, bb - 8, 'Stable', { col: '#2fa39a', fs: clamp(18 * u, 16, 24), badge: (landDone(1) && driveTokens() > 0) || fixReady() ? '!' : 0, fn: () => go(SC.build) });
     btn('mTack', L.x0 + 24 + bw, by, bw, bb - 8, 'Tack Room', { col: '#8a5cd6', fs: clamp(18 * u, 16, 24), badge: S.newItems ? Object.keys(S.newItems).length || 0 : 0, fn: () => go(SC.tack) });
     btn('mStick', L.x0 + 36 + bw * 2, by, bw, bb - 8, 'Stickers', { col: '#ff8c2e', fs: clamp(18 * u, 16, 24), fn: () => go(SC.stickers) });
     parentGateBtn(L, L.x1 - gr - 8, by + (bb - 8) / 2 - 6);
@@ -55,9 +55,12 @@ SC.map = { name: 'map', panel: null,
     ibtn('panelClose', x + w - 34, y + 35, 22, (cx, cy, r) => icClose(cx, cy, r, INK), { fn: () => { this.panel = null; SFX.back(); }, minHit: 50 });
     const tfs = clamp(16 * u, 15, 20); let cy = y + 86; g.textAlign = 'left'; g.textBaseline = 'top'; font(tfs, F.body, 700); g.fillStyle = INK; tipLines.forEach((t, i) => g.fillText(t, x + 24, cy + i * tfs * 1.35)); cy += tipLines.length * tfs * 1.35 + 12;
     for (let r = 0; r < n; r++) { const open = raceOpen(l, r), st = raceStars(l, r); panel(x + 14, cy, w - 28, rowH, 16, open ? '#fff' : '#eee8f2', { lw: 2.5, shadow: false });
-      text(Ld.races[r].n, x + 30, cy + rowH * 0.36, clamp(18 * u, 16, 22), open ? INK : '#9a8aa8', { align: 'left', fam: F.title, w: 400, max: w - 200 });
+      text(Ld.races[r].n, x + 30, cy + rowH * 0.36, clamp(18 * u, 16, 22), open ? INK : '#9a8aa8', { align: 'left', fam: F.title, w: 400, max: w - (l > 0 && r < 2 ? 200 + Math.min(52, rowH - 20) + 10 : 200) });
       for (let k = 0; k < 3; k++) shape(() => star(x + 40 + k * 26, cy + rowH * 0.7, 10), k < st ? '#ffd93d' : '#fff', 2);
-      if (open) btn('ride' + r, x + w - 28 - 120, cy + 10, 120, rowH - 20, st ? 'Again' : 'Ride!', { col: st ? '#2fa39a' : '#ff6f91', fn: () => { this.panel = null; go(SC.treat, { l, r }); } });
+      if (l > 0 && r < 2) { const ir = Math.min(26, (rowH - 20) / 2), icx = x + w - 28 - 100 - ir - 10, icy = cy + rowH / 2; const ok = st > 0, ist = interStars(l, r), need = ok && !ist; if (need) { g.save(); g.globalAlpha = 0.4 + 0.3 * Math.sin(T * 5); shape(() => C(icx, icy, ir + 7), r === 0 ? '#ff9f43' : '#4cc3ff', 0); g.restore(); }
+        ibtn('inter' + r, icx, icy, ir, (cx2, cy2, rr) => { if (!ok) icLock(cx2, cy2, rr * 0.8); else if (r === 0) carrotArt(cx2, cy2, rr * 1.7, -0.7); else { g.save(); g.translate(cx2 - rr * 0.2, cy2); realBow(0, 0, rr * 1.8, false); g.restore(); arrowArt(cx2 - rr * 0.6, cy2 + rr * 0.1, cx2 + rr * 0.7, cy2 + rr * 0.1, rr / 40); } }, { col: ok ? '#fff6dc' : '#eee8f2', minHit: 52, fn: () => { if (!ok) { SFX.no(); toast('Ride ' + Ld.races[r].n + ' first!', '#9b8ab8'); return; } this.panel = null; go(interScene(r), { l, slot: r, replay: ist > 0 }); } });
+        if (ist) { shape(() => C(icx + ir * 0.75, icy - ir * 0.75, 9), '#ffd93d', 2); text(String(ist), icx + ir * 0.75, icy - ir * 0.75 + 1, 11, INK, { fam: F.title, w: 400 }); } }
+      const rbw = l > 0 && r < 2 ? 100 : 120; if (open) btn('ride' + r, x + w - 28 - rbw, cy + 10, rbw, rowH - 20, st ? 'Again' : 'Ride!', { col: st ? '#2fa39a' : '#ff6f91', fn: () => { this.panel = null; go(SC.treat, { l, r }); } });
       else icLock(x + w - 28 - 60, cy + rowH / 2, 16);
       cy += rowH + 10; }
     if (gReady) btn('grandGo', x + 14, cy, w - 28, rowH, 'Grand Stop: ' + Ld.grand + '!', { col: '#ffb02e', fn: () => { this.panel = null; go(SC.grand, { l }); } });
@@ -91,7 +94,7 @@ SC.treat = { name: 'treat',
     const k = Math.min(scW / 820, scH / 430); const gy = tb + scH * 0.93;
     const eatH = this.eat && TREATS[this.eat.k].who === 'horse' && this.eat.t < 1.1;
     const hx = scW * 0.72;
-    if (h) drawHorseC(h, hx, gy, k * 1.0, { pose: eatH ? 'munch' : 'proud', expr: eatH ? 'munch' : undefined });
+    if (h) drawHorseC(h, hx, gy, k * 1.0, { pose: eatH ? 'munch' : 'proud', expr: eatH ? 'munch' : undefined }); if (S.foal) drawFoal(hx - 210 * k, gy + 4, k, { pose: 'stand' });
     if (this.hugT >= 0 && this.hugT < 2.2) { drawHug(scW * 0.28, gy, k * 1.0); }
     else { drawKari(scW * 0.16, gy, k * 0.95, { pose: 'basket' }); drawKimber(scW * 0.37, gy, k * 0.88, { pose: this.eat && this.eat.k === 'cake' ? 'cheer' : 'stand', expr: 'happy' }); }
     if (this.eat) { const e = this.eat, p = clamp(e.t / 0.6, 0, 1); const toH = TREATS[e.k].who === 'horse'; const tx = lerp(VW / 2, toH ? hx + 120 * k : scW * 0.37, easeInOut(p)), ty = lerp(sy + 60, toH ? gy - 220 * k : gy - 190 * k, easeInOut(p)) - Math.sin(p * Math.PI) * 60;
@@ -132,7 +135,7 @@ SC.results = { name: 'results',
     cy += sr * 2 + 16; const fs = clamp(17 * u, 15, 22);
     const why = ['Finished the race!', a.shoeGoal ? a.shoes + ' horseshoes (goal: ' + a.shoeNeed + ')' : 'Star 2: get ' + a.shoeNeed + ' horseshoes (you got ' + a.shoes + ')', a.bumps <= 2 || a.caught ? (a.caught ? 'Caught up with Whirligig!' : a.bumps === 0 ? 'No bumps at all!' : 'Only ' + a.bumps + ' bump' + (a.bumps === 1 ? '' : 's') + '!') : 'Star 3: 2 bumps or fewer, or catch Whirligig'];
     why.forEach((s, i) => { const ok = i === 0 || (i === 1 ? a.shoeGoal : (a.bumps <= 2 || a.caught)); (ok ? (xx, yy, r) => { shape(() => C(xx, yy, r), '#6bd66b', 2); icCheck(xx, yy, r * 0.7); } : (xx, yy, r) => shape(() => C(xx, yy, r), '#eee', 2))(x + 34, cy + fs * 0.7, fs * 0.6); text(s, x + 56, cy + fs * 0.7, fs, ok ? INK : '#8a7a9a', { align: 'left', fam: F.ui, w: 800, max: cW - 80 }); cy += fs * 1.6; });
-    cy += 4; horseshoe(x + 34, cy + fs * 0.7, fs * 0.55); text('+' + a.shoes + ' horseshoes  (jar: ' + S.shoes + ')', x + 56, cy + fs * 0.7, fs, INK, { align: 'left', fam: F.ui, w: 800, max: cW - 80 }); cy += fs * 1.7;
+    cy += 4; horseshoe(x + 34, cy + fs * 0.7, fs * 0.55); text('+' + (a.shoes + (a.res.lucky || 0)) + ' horseshoes' + (a.res.lucky ? ' (lucky!)' : '') + '  \u00b7  pouch: ' + (S.wallet || 0), x + 56, cy + fs * 0.7, fs, INK, { align: 'left', fam: F.ui, w: 800, max: cW - 80 }); cy += fs * 1.7;
     if (a.res.golden) { goldenApple(x + 34, cy + fs * 0.7, fs * 0.6); text('Horseshoe jar full! A golden apple!', x + 56, cy + fs * 0.7, fs, '#b8860b', { align: 'left', fam: F.ui, w: 800, max: cW - 80 }); cy += fs * 1.7; }
     const cy0 = cy; if (two) cy = y + 50 * u + 20; box('resInfo', x + 20, y + 50 * u + 20, cW - 40, cy0 - (y + 50 * u + 20)); const left = y + ht - bh * 2 - 34 - cy; const NM = rX + rW / 2;
     if (a.res.newItems.length && left > 60) { text('New in the Tack Room!', NM, cy + fs * 0.7, fs * 1.1, '#8a5cd6', { fam: F.title, w: 400 }); cy += fs * 1.6; const ts = Math.min(left - fs * 3.2, 120, (rW - 60) / 2 - 10); const h = HORSE(); const NI = a.res.newItems;
@@ -143,6 +146,7 @@ SC.results = { name: 'results',
     btn('resTack', bx0 + 14, by - bh - 10, rW - 28, bh, 'Tack Room', { col: '#8a5cd6', badge: a.res.newItems.length, fn: () => go(SC.tack, { from: 'map' }) });
     btn('resMap', bx0 + 14, by, bw, bh, 'Map', { col: '#2fa39a', fn: () => go(SC.map) });
     if (gR) btn('resNext', bx0 + 26 + bw, by, bw, bh, 'Grand Stop!', { col: '#ffb02e', fn: () => go(SC.grand, { l: a.l }) });
+    else if (a.l > 0 && a.r < 2 && !interDone(a.l, a.r)) btn('resNext', bx0 + 26 + bw, by, bw, bh, interName(a.r) + '!', { col: a.r === 0 ? '#ff9f43' : '#4cc3ff', fn: () => go(interScene(a.r), { l: a.l, slot: a.r }) });
     else if (nextR >= 0) btn('resNext', bx0 + 26 + bw, by, bw, bh, 'Next race', { col: '#ff6f91', fn: () => go(SC.treat, { l: a.l, r: nextR }) });
     else btn('resNext', bx0 + 26 + bw, by, bw, bh, 'Ride again', { col: '#ff6f91', fn: () => go(SC.treat, { l: a.l, r: a.r }) });
   } };
@@ -157,7 +161,7 @@ SC.grand = { name: 'grand',
     const artH = port ? L.ch * 0.55 : L.ch; const artW = port ? VW : L.x0 + L.cw * 0.58;
     landVignette(l, 0, 0, artW, (port ? L.y0 : 0) + artH, Math.min(artW / 700, artH / 520), this.t);
     const k = Math.min(artW / 760, artH / 520); const gy = (port ? L.y0 : 0) + artH * 0.93; const h = HORSE();
-    if (h) drawHorseC(h, artW * 0.4, gy, k * 0.95, { pose: this.t > 3.2 ? 'proud' : 'stand', rider: true });
+    if (h) drawHorseC(h, artW * 0.4, gy, k * 0.95, { pose: this.t > 3.2 ? 'proud' : 'stand', rider: true }); if (S.foal) drawFoal(artW * 0.4 - 230 * k + Math.sin(this.t * 2) * 6, gy + 4, k * 0.95, { pose: this.t > 3.2 ? prancePose(this.t * 0.8) : 'stand' });
     if (l > 0) { const th = Ld.thread; const p = clamp((this.t - 1.2) / 2, 0, 1); const sx = artW * 0.7, sy = gy - 200 * k, ex = artW * 0.5, ey = (port ? L.y0 : 0) + 30;
       const cx = lerp(sx, ex, easeInOut(p)), cy = lerp(sy, ey, easeInOut(p)) - Math.sin(p * Math.PI) * 80 * k; const tr = () => { g.moveTo(cx - 60 * k, cy + 10); g.bezierCurveTo(cx - 20 * k, cy - 30 * k + Math.sin(this.t * 5) * 8, cx + 20 * k, cy + 30 * k, cx + 60 * k, cy - 6); };
       if (p < 1) { strokeOnly(tr, INK, 12 * k); strokeOnly(tr, RIBBON[th], 7 * k); sparkle(cx + 60 * k, cy - 6, 10 * k); }

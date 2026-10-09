@@ -33,15 +33,15 @@ function awardRace(l, r, stars, shoes, stickers) {
   if (l === 0) S.prog.prologue[0] = best; else S.prog.ch[l - 1].races[r] = best;
   const newItems = [];
   if (first) { for (const id of UNLOCK_QUEUE) { if (newItems.length >= 2) break; if (!S.unlocked[id] && !STARTER_ITEMS.includes(id)) { S.unlocked[id] = 1; newItems.push(id); } } }
-  const before = S.shoes; S.shoes += shoes; let golden = 0; while (S.shoes >= S.jarNext) { S.jarNext += 100; S.golden++; golden++; }
+  const before = S.shoes; const lucky = owns('k2') ? Math.round(shoes * 0.1) : 0; const golden = earn(shoes + lucky);
   for (const st of stickers) S.stickers[st] = 1;
   S.stats.races++; save();
-  return { first, newItems, stars, best, golden, shoes, before };
+  return { first, newItems, stars, best, golden, shoes, before, lucky };
 }
 function grandReady(l) { if (l === 0) return S.prog.prologue[0] > 0 && !S.prog.seen.grand0; return S.prog.ch[l - 1].races.every(x => x > 0) && !S.prog.ch[l - 1].grand; }
 function awardGrand(l) { const out = { academy: null };
   if (l === 0) S.prog.seen.grand0 = 1; else { S.prog.ch[l - 1].grand = true; const a = ACADEMY_REWARD[l]; if (a) { S.unlocked[a] = 1; out.academy = a; } }
-  if (!S.rosettes.includes(l)) S.rosettes.push(l); save(); return out; }
+  if (!S.rosettes.includes(l)) S.rosettes.push(l); if (l >= 1) { S.truck.tok = Math.min(3, (S.truck.tok || 0) + 1); if (S.shop.built) S.fix.tok = Math.min(3, (S.fix.tok || 0) + 1); } save(); return out; }
 function nextStoryFor(l) { return l < 7 ? 'c' + (l + 1) : null; }
 function allRacesDone() { return S.prog.ch.every(c => c.grand); }
 // faded-colors overlay for lands whose thread has not returned yet

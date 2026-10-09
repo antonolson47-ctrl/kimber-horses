@@ -48,13 +48,13 @@ const problems = []; const log = (...a) => console.log('[' + tag + ']', ...a);
   const items = await p.evaluate(() => __KH.hits().filter(h => h.id.startsWith('it_')).map(h => h.id)); await tap(items[0]); await shot('tack_card'); await check('tack card');
   await p.evaluate(() => __KH.scroll('tmpCard', 250)); await p.waitForTimeout(300); await tap('col_0_1'); await shot('tack_card_scrolled'); await tap('cardClose'); for (const t of ['tab1', 'tab3']) { await tap(t); await check('tack ' + t); } await p.evaluate(() => __KH.scroll('tmpTabs', 9999)); await p.waitForTimeout(200); await tap('tab8'); await shot('tack_kimber'); await check('tack kimber'); await tap('kim_helmet2'); await p.evaluate(() => __KH.scroll('tmpTabs', 0)); await p.waitForTimeout(200); await tap('tab1'); const it2 = await p.evaluate(() => __KH.hits().filter(h => h.id.startsWith('it_')).map(h => h.id)); await tap(it2[0]); await check('tack card2');
   const wear = await p.evaluate(() => __KH.hits().some(h => h.id === 'wear')); if (wear) await tap('wear'); await tap('cardClose'); await tap('surprise'); await tap('back');
-  await tap('mStable'); await waitScene('stable'); await shot('stable'); await check('stable'); await tap('back');
+  await tap('mStable'); await waitScene('build'); await shot('build'); await check('build'); await tap('toHorses'); await waitScene('stable'); await shot('stable'); await check('stable'); await tap('back'); await waitScene('build'); await tap('toMap2'); await waitScene('map');
   await tap('mStick'); await waitScene('stickers'); await check('stickers'); await tap('back');
   await holdId('parentGate', 3300); await p.waitForTimeout(200); await shot('settings'); await check('settings'); await tap('setClose');
   if (QUICK) { await tap('land1', { wait: 300 }); await tap('ride0'); await treatAndRace(1, 0); }
   else {
     for (let l = 1; l <= 7; l++) { await waitScene('map'); await tap('land' + l, { wait: 300 }); await shot('land_panel_' + l); await check('land panel'); await tap('ride0');
-      for (let r = 0; r < 3; r++) { await treatAndRace(l, r); await tap('resNext'); }
+      for (let r = 0; r < 3; r++) { await treatAndRace(l, r); if (r < 2) await p.evaluate(([l, r]) => { __KH.S.inter[r ? 'a' : 'c'][l - 1] = 2; }, [l, r]); await tap('resNext'); }
       await waitScene('grand'); await p.waitForTimeout(3800); if (l === 1 || l === 7) await shot('grand' + l); await check('grand'); await tap('grandCont'); await story();
       if (l === 3) { await waitScene('map'); await tap('mTack'); await waitScene('tack'); await tap('tab0'); const ids = await p.evaluate(() => __KH.hits().filter(h => h.id.startsWith('it_')).map(h => h.id)); await tap(ids[ids.length - 1]); await shot('tack_card_saddle'); await check('tack card saddle'); await tap('cardClose'); await tap('back'); }
     }
